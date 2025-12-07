@@ -122,6 +122,62 @@ h3 {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.7);
+  display: none; /* caché au départ */
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loader {
+  border: 10px solid #f3f3f3;
+  border-top: 10px solid #28a745;
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   </style>
 </head>
 <body>
@@ -197,12 +253,23 @@ h3 {
 
 </div>
 
+
+
+
+<div id="loadingOverlay">
+  <div class="loader"></div>
+</div>
+
+
+
+
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 
 <script>
-const map = L.map('map').setView([48.8566, 2.3522], 16);
+const map = L.map('map').setView([48.8566, 2.3522], 19);
 
 // Fond satellite Esri
 const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -210,31 +277,35 @@ const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/
     maxZoom: 60
 }).addTo(map);
 
-// Filtre uniquement sur les tuiles
+// Filtrage visuel
 tiles.getContainer().style.filter = 'brightness(90%) contrast(80%) saturate(90%)';
 
-// FeatureGroup pour polygones
+// FeatureGroup
 const drawnItems = new L.FeatureGroup();
 map.addLayer(drawnItems);
 
 let dernierPolygone = null;
 
 
+//-----------------------------------------
+// 🔵 ANIMATION DE CHARGEMENT
+//-----------------------------------------
+function showLoader() {
+  document.getElementById('loadingOverlay').style.display = "flex";
+}
+
+function hideLoader() {
+  document.getElementById('loadingOverlay').style.display = "none";
+}
 
 
 
+//-----------------------------------------
+// 🔵 CONTRÔLE DE DESSIN
+//-----------------------------------------
 
-
-
-
-
-
-
-
-
-// Initialisation du contrôle de dessin : pas de boutons d'édition au départ
 let drawControl = new L.Control.Draw({
-  edit: false,  // désactive les boutons de modification
+  edit: false,
   draw: {
     polygon: {
       allowIntersection: false,
@@ -257,21 +328,27 @@ let drawControl = new L.Control.Draw({
     circlemarker: false
   }
 });
+
 map.addControl(drawControl);
 
-// Après création du premier polygone, on remplace le contrôle par un nouveau incluant l'édition
+
+
+//-----------------------------------------
+// 🔵 PREMIÈRE CRÉATION DE POLYGONE
+//-----------------------------------------
 map.on(L.Draw.Event.CREATED, function (e) {
+
+  showLoader(); // affiche l'animation
+
   const layer = e.layer;
   drawnItems.addLayer(layer);
   dernierPolygone = layer.toGeoJSON();
   afficherBilanHydrique();
 
-  // Supprime l’ancien contrôle
+  // Remplace le contrôle par un avec édition activée
   map.removeControl(drawControl);
-
-  // Crée un nouveau contrôle avec l'édition activée
   drawControl = new L.Control.Draw({
-    edit: { featureGroup: drawnItems }, // maintenant modification et suppression possibles
+    edit: { featureGroup: drawnItems },
     draw: {
       polygon: {
         allowIntersection: false,
@@ -294,38 +371,37 @@ map.on(L.Draw.Event.CREATED, function (e) {
       circlemarker: false
     }
   });
+
   map.addControl(drawControl);
 
-
-
-// Scroll automatique du panneau jusqu'au bilan hydrique
-document.getElementById('info').scrollTo({
+  // Scroll automatique
+  document.getElementById('info').scrollTo({
     top: document.getElementById('bilan-hydrique').offsetTop,
-    behavior: 'smooth' // pour un défilement fluide
+    behavior: 'smooth'
+  });
+
+  setTimeout(() => hideLoader(), 600); // retire l'animation
 });
 
 
 
-});
+//-----------------------------------------
+// 🔵 FONCTION CALCUL BILAN HYDRIQUE
+//-----------------------------------------
 
-
-
-
-
-
-
-
-
-
-
-// Calcul bilan hydrique
 function calculerBilanParis(polygonGeoJSON, typeToiture='extensive') {
+
   const area = turf.area(polygonGeoJSON);
+
   const P = 634;
   const ETp = 890.5;
 
   let Cr = 0.25, Kc = 0.6;
-  if (typeToiture === 'intensive') { Cr = 0.5; Kc = 0.9; }
+
+  if (typeToiture === 'intensive') { 
+    Cr = 0.5; 
+    Kc = 0.9; 
+  }
 
   const V_pluie = P * area * 1e-3;
   const V_retenu = P * Cr * area * 1e-3;
@@ -335,8 +411,14 @@ function calculerBilanParis(polygonGeoJSON, typeToiture='extensive') {
   return { area, V_pluie, V_retenu, ET, V_ruiss };
 }
 
-// Fonction pour afficher le bilan et l'image
+
+
+//-----------------------------------------
+// 🔵 AFFICHAGE DU BILAN + IMAGES
+//-----------------------------------------
+
 function afficherBilanHydrique() {
+
   const typeToiture = document.getElementById('typeToiture').value;
 
   if (dernierPolygone) {
@@ -350,40 +432,41 @@ function afficherBilanHydrique() {
       `<b>Volume ruisselé :</b> ${bilan.V_ruiss.toFixed(2)} m³/an`;
   }
 
-  // Affichage de l'image selon le type de toiture
   const img = document.getElementById('toitureImage');
-  if(typeToiture === 'extensive') {
-    img.src = 'https://www.toit-vegetalise.fr/wp-content/uploads/2024/11/TOUNDRA-TOITURE-VEGETALISE-3.jpg'; // URL toiture extensive
-  } else if(typeToiture === 'intensive') {
-    img.src = 'https://www.snpn.com/wp-content/uploads/2022/12/photo_hor_RESTREINT-CLN_toit-vegetal-Paris_MBarra.jpg'; // URL toiture intensive
+
+  if (typeToiture === 'extensive') {
+    img.src = 'https://www.toit-vegetalise.fr/wp-content/uploads/2024/11/TOUNDRA-TOITURE-VEGETALISE-3.jpg';
+  } else {
+    img.src = 'https://www.snpn.com/wp-content/uploads/2022/12/photo_hor_RESTREINT-CLN_toit-vegetal-Paris_MBarra.jpg';
   }
+
   img.style.display = 'block';
 
+  document.getElementById('sectionExtensive').style.display =
+    typeToiture === 'extensive' ? 'block' : 'none';
 
-    // Affichage des sections spécifiques
-  document.getElementById('sectionExtensive').style.display = typeToiture === 'extensive' ? 'block' : 'none';
-  document.getElementById('sectionIntensive').style.display = typeToiture === 'intensive' ? 'block' : 'none';
-
+  document.getElementById('sectionIntensive').style.display =
+    typeToiture === 'intensive' ? 'block' : 'none';
 }
 
-// Initialisation de l'image dès le chargement
+
+
+//-----------------------------------------
+// 🔵 À L’OUVERTURE DE LA PAGE
+//-----------------------------------------
 window.addEventListener('DOMContentLoaded', afficherBilanHydrique);
 
-// Création polygone
-map.on(L.Draw.Event.CREATED, function (e) {
-  const layer = e.layer;
-  drawnItems.addLayer(layer);
-  dernierPolygone = layer.toGeoJSON();
-  afficherBilanHydrique();
-});
 
-// Changement type de toiture
-document.getElementById('typeToiture').addEventListener('change', function() {
-  afficherBilanHydrique();
-});
+//-----------------------------------------
+// 🔵 CHANGEMENT TYPE DE TOITURE
+//-----------------------------------------
+document.getElementById('typeToiture').addEventListener('change', afficherBilanHydrique);
 </script>
 
 </body>
 </html>
+
+</html>
+
 
 
