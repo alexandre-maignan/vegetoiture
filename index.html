@@ -1,472 +1,186 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bilan hydrique toitures végétalisées - Paris</title>
+    <meta charset="UTF-8">
+    <title>Carte avec barre de boutons</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-    body {
-      display: flex;
-      flex-direction: row;
-    }
-    #map {
-      flex: 1;
-      height: 100%;
-      position: relative;
-    }
-    .info {
-      width: 35vw; /* 1/3 environ */
-      height: 100%;
-      background: #f8f9fa; /* fond clair */
-      padding: 20px;
-      box-shadow: -2px 0 8px rgba(0,0,0,0.4);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      border-left: 2px solid #dee2e6;
-      overflow-y: auto;
-      box-sizing: border-box;
-      border-radius: 0 10px 10px 0;
-    }
-    .info h2 {
-      margin-top: 0;
-      margin-bottom:10px;
-      font-size: 2.1em;
-      color: #28a745;
-      border-bottom: 1px solid #dee2e6;
-      padding-bottom: 10px;
-      margin-bottom: 20px;
-    }
-    .info label {
-      font-weight: 600;
-      color: #495057;
-    }
-    .info select {
-      width: 100%;
-      margin-top: 10px;
-      margin-bottom: 15px;
-      padding: 6px 8px;
-      border: 1px solid #ced4da;
-      border-radius: 5px;
-      font-size: 0.95em;
-      background: #ffffff;
-      color: #495057;
-    }
-    #result {
-      line-height: 1.5;
-      color: #495057;
-      margin-bottom:  40px;
-    }
-    #result b {
-      color: #212529;
-    }
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        /* Reset global */
+        * { margin:0; padding:0; box-sizing:border-box; font-family: 'Roboto', sans-serif; }
+        html, body { height:100%; width:100%; }
+        #map { height:100%; width:100%; position:relative; filter: contrast(0.8) saturate(0.8); /* contraste réduit et saturation diminuée */}
+
+        /* Barre de boutons centrée en haut */
+        .mapbar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .mapbar button {
+            padding: 10px 14px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* ombre légère */ 
+            border-radius: 50px; /* arrondi complet */
+            background-color: #3399FF;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            transition: background-color 0.3s ease;
+        }
+
+        .mapbar button i {
+            margin-right: 8px;
+            font-size: 1em;       /* même taille que le texte */
+            display: inline-flex;
+            align-items: center;  /* alignement vertical */
+        }
+
+        .mapbar button:hover {
+          background-color: #2A82E6; /* couleur légèrement plus foncée au survol */
+        }
 
 
-    #toitureImage {
-      width: 100%;
-      border-radius: 8px;
-      margin-top: 10px;
-      margin-bottom: 30px;
-      height: auto;       /* conserve les proportions */
-    }
+.search-bar {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            font-size: 16px;
+            border-radius: 50px;
+            border: none;
+            background-color: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .search-bar i {
+            margin-right: 8px;
+            color: #555;
+        }
+
+        .search-bar input {
+            border: none;
+            outline: none;
+            font-size: 14px;
+            width: auto; 
+        }
 
 
-
-
-
-
-
-
-
-
-
-
-
-.section-toiture h3 {
-  margin-top: 0;
-  font-size: 1.2em;
-  color: #28a745;
-}
-
-.section-toiture p {
-  margin: 0;
+#searchBtn {
+    cursor: pointer;
 }
 
 
 
-h3 {
-  margin-top: 0;
-  font-size: 1.5em;
-  color: #28a745;
-}
-
-
-
-
-#sectionExtensive {
-  line-height: 1.2; /* réduit l'espacement entre les lignes (par défaut souvent ~1.5) */
-  margin-top: 15px;
-
-}
-#sectionintensive {
-  line-height: 1.2; /* réduit l'espacement entre les lignes (par défaut souvent ~1.5) */
-  margin-top: 15px;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#loadingOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255,255,255,0.7);
-  display: none; /* caché au départ */
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.loader {
-  border: 10px solid #f3f3f3;
-  border-top: 10px solid #28a745;
-  border-radius: 50%;
-  width: 70px;
-  height: 70px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  </style>
+    </style>
 </head>
 <body>
 
-<div id="map"></div>
-<div class="info" id="info">
-  <h2>Evaluez votre projet de toiture végétale</h2>
-  <label for="typeToiture"><b>Type de toiture végétalisée :</b></label>
-  <select id="typeToiture">
-    <option value="extensive" >Extensive</option>
-    <option value="intensive" selected>Intensive</option>
-  </select>
-  <img id="toitureImage" src="" alt="Image de toiture">
-  <h3 id="bilan-hydrique">Bilan hydrique de la toiture</h3>
-  <div id="result">Dessinez un polygone pour calculer le bilan hydrique.</div>
+    <div id="map"></div>
 
-
-<div id="sectionExtensive">
-  <h3>Toiture végétalisée extensive</h3>
-  <p><b>Poids :</b> léger, environ 60 à 150 kg/m².</p>
-  <p><b>Entretien :</b> faible à très faible.</p>
-  <p><b>Type de végétation :</b> plantes résistantes, souvent sedums, mousses, graminées, qui demandent peu de nutriments et peuvent survivre avec la pluie.</p>
-  <p><b>Accessibilité :</b> rarement piétonne, usage limité.</p>
-
-  <p><b>Objectif principal :</b></p>
-  <ul>
-    <li>Isolation thermique et acoustique</li>
-    <li>Gestion des eaux pluviales</li>
-    <li>Amélioration de la biodiversité</li>
-    <li>Effet esthétique discret</li>
-  </ul>
-
-  <p><b>Avantages :</b></p>
-  <ul>
-    <li>Léger, facile à installer</li>
-    <li>Coût relativement faible</li>
-  </ul>
-
-  <p><b>Inconvénients :</b></p>
-  <ul>
-    <li>Végétation moins variée</li>
-    <li>Non adaptée aux espaces de loisirs</li>
-  </ul>
+    <!-- Barre de boutons -->
+    <div class="mapbar">
+        <button id="btn1"><i class="fa-solid fa-pen"></i> Tracer la toiture</button>
+<div class="search-bar">
+    <i id="searchBtn" class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" placeholder="Rechercher une adresse" id="searchInput">
 </div>
+    </div>
 
-<div id="sectionIntensive" >
-  <h3>Toiture végétalisée intensive</h3>
-  <p><b>Poids :</b> lourd, environ 200 à 500 kg/m² (peut nécessiter un renforcement de la structure).</p>
-  <p><b>Entretien :</b> régulier (arrosage, désherbage, taille).</p>
-  <p><b>Type de végétation :</b> très variée : arbustes, petits arbres, pelouses, potagers.</p>
-  <p><b>Accessibilité :</b> généralement piétonne et aménageable pour des jardins ou terrasses.</p>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
 
-  <p><b>Objectif principal :</b></p>
-  <ul>
-    <li>Créer un espace vert utilisable</li>
-    <li>Isolation thermique et acoustique plus performante</li>
-    <li>Gestion des eaux pluviales</li>
-  </ul>
+    <script>
+        // Initialisation de la carte (centrée sur Paris)
+        var map = L.map('map').setView([48.8566, 2.3522], 19);
 
-  <p><b>Avantages :</b></p>
-  <ul>
-    <li>Grande biodiversité et esthétisme</li>
-    <li>Possibilité d’aménagements fonctionnels</li>
-  </ul>
-
-  <p><b>Inconvénients :</b></p>
-  <ul>
-    <li>Poids important → nécessite renfort de structure</li>
-    <li>Coût et entretien élevés</li>
-  </ul>
-
-</div>
-
-</div>
-
-
-
-
-<div id="loadingOverlay">
-  <div class="loader"></div>
-</div>
-
-
-
-
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
-
-<script>
-const map = L.map('map').setView([48.8566, 2.3522], 19);
-
-// Fond satellite Esri
-const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
-    maxZoom: 60
+        // Fond OpenStreetMap
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    maxZoom: 19
 }).addTo(map);
 
-// Filtrage visuel
-tiles.getContainer().style.filter = 'brightness(90%) contrast(80%) saturate(90%)';
-
-// FeatureGroup
-const drawnItems = new L.FeatureGroup();
-map.addLayer(drawnItems);
-
-let dernierPolygone = null;
 
 
-//-----------------------------------------
-// 🔵 ANIMATION DE CHARGEMENT
-//-----------------------------------------
-function showLoader() {
-  document.getElementById('loadingOverlay').style.display = "flex";
+        // Déplacer les boutons de zoom en bas à droite
+        map.zoomControl.remove();
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Bouton de géolocalisation
+        L.control.locate({
+            position: 'bottomright',
+            strings: { title: "Afficher ma position" },
+            flyTo: true,
+            showPopup: false,
+            drawCircle: false
+        }).addTo(map);
+
+        // Événements pour les boutons
+        document.getElementById('btn1').addEventListener('click', () => alert("Bouton 1 cliqué !"));
+    </script>
+
+
+
+
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+
+function geocodeAndMoveMap(query) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+
+                // Déplacer la carte
+                map.setView([lat, lon], 16); // zoom à 16 pour la localisation précise
+
+                // Ajouter un marqueur à l'adresse
+                L.marker([lat, lon]).addTo(map)
+                    .bindPopup(query)
+                    .openPopup();
+            } else {
+                alert("Adresse introuvable");
+            }
+        })
+        .catch(error => {
+            console.error("Erreur de géocodage :", error);
+            alert("Erreur lors de la recherche");
+        });
 }
 
-function hideLoader() {
-  document.getElementById('loadingOverlay').style.display = "none";
-}
-
-
-
-//-----------------------------------------
-// 🔵 CONTRÔLE DE DESSIN
-//-----------------------------------------
-
-let drawControl = new L.Control.Draw({
-  edit: false,
-  draw: {
-    polygon: {
-      allowIntersection: false,
-      showArea: true,
-      shapeOptions: {
-        color: 'red',
-        weight: 3,
-        opacity: 0.9,
-        fillColor: 'red',
-        fillOpacity: 0.4,
-        dashArray: '4,4'
-      },
-      metric: true,
-      repeatMode: false
-    },
-    polyline: false,
-    rectangle: false,
-    circle: false,
-    marker: false,
-    circlemarker: false
-  }
-});
-
-map.addControl(drawControl);
-
-
-
-//-----------------------------------------
-// 🔵 PREMIÈRE CRÉATION DE POLYGONE
-//-----------------------------------------
-map.on(L.Draw.Event.CREATED, function (e) {
-
-  showLoader(); // affiche l'animation
-
-  const layer = e.layer;
-  drawnItems.addLayer(layer);
-  dernierPolygone = layer.toGeoJSON();
-  afficherBilanHydrique();
-
-  // Remplace le contrôle par un avec édition activée
-  map.removeControl(drawControl);
-  drawControl = new L.Control.Draw({
-    edit: { featureGroup: drawnItems },
-    draw: {
-      polygon: {
-        allowIntersection: false,
-        showArea: true,
-        shapeOptions: {
-          color: 'red',
-          weight: 3,
-          opacity: 0.9,
-          fillColor: 'red',
-          fillOpacity: 0.4,
-          dashArray: '4,4'
-        },
-        metric: true,
-        repeatMode: false
-      },
-      polyline: false,
-      rectangle: false,
-      circle: false,
-      marker: false,
-      circlemarker: false
+// Recherche sur clic
+searchBtn.addEventListener('click', () => {
+    const query = searchInput.value.trim();
+    if (query) {
+        geocodeAndMoveMap(query);
     }
-  });
-
-  map.addControl(drawControl);
-
-  // Scroll automatique
-  document.getElementById('info').scrollTo({
-    top: document.getElementById('bilan-hydrique').offsetTop,
-    behavior: 'smooth'
-  });
-
-  setTimeout(() => hideLoader(), 600); // retire l'animation
 });
 
+// Recherche sur Enter
+searchInput.addEventListener('keypress', function(e) {
+    if(e.key === 'Enter') searchBtn.click();
+});
 
-
-//-----------------------------------------
-// 🔵 FONCTION CALCUL BILAN HYDRIQUE
-//-----------------------------------------
-
-function calculerBilanParis(polygonGeoJSON, typeToiture='extensive') {
-
-  const area = turf.area(polygonGeoJSON);
-
-  const P = 634;
-  const ETp = 890.5;
-
-  let Cr = 0.25, Kc = 0.6;
-
-  if (typeToiture === 'intensive') { 
-    Cr = 0.5; 
-    Kc = 0.9; 
-  }
-
-  const V_pluie = P * area * 1e-3;
-  const V_retenu = P * Cr * area * 1e-3;
-  const ET = ETp * Kc * area * 1e-3;
-  const V_ruiss = Math.max(V_pluie - V_retenu - ET, 0);
-
-  return { area, V_pluie, V_retenu, ET, V_ruiss };
-}
-
-
-
-//-----------------------------------------
-// 🔵 AFFICHAGE DU BILAN + IMAGES
-//-----------------------------------------
-
-function afficherBilanHydrique() {
-
-  const typeToiture = document.getElementById('typeToiture').value;
-
-  if (dernierPolygone) {
-    const bilan = calculerBilanParis(dernierPolygone, typeToiture);
-    document.getElementById('result').innerHTML =
-      `<b>Type de toiture :</b> ${typeToiture}<br>` +
-      `<b>Surface :</b> ${bilan.area.toFixed(1)} m²<br>` +
-      `<b>Volume total de pluie :</b> ${bilan.V_pluie.toFixed(2)} m³/an<br>` +
-      `<b>Volume retenu :</b> ${bilan.V_retenu.toFixed(2)} m³/an<br>` +
-      `<b>Évapotranspiration :</b> ${bilan.ET.toFixed(2)} m³/an<br>` +
-      `<b>Volume ruisselé :</b> ${bilan.V_ruiss.toFixed(2)} m³/an`;
-  }
-
-  const img = document.getElementById('toitureImage');
-
-  if (typeToiture === 'extensive') {
-    img.src = 'https://www.toit-vegetalise.fr/wp-content/uploads/2024/11/TOUNDRA-TOITURE-VEGETALISE-3.jpg';
-  } else {
-    img.src = 'https://www.snpn.com/wp-content/uploads/2022/12/photo_hor_RESTREINT-CLN_toit-vegetal-Paris_MBarra.jpg';
-  }
-
-  img.style.display = 'block';
-
-  document.getElementById('sectionExtensive').style.display =
-    typeToiture === 'extensive' ? 'block' : 'none';
-
-  document.getElementById('sectionIntensive').style.display =
-    typeToiture === 'intensive' ? 'block' : 'none';
-}
-
-
-
-//-----------------------------------------
-// 🔵 À L’OUVERTURE DE LA PAGE
-//-----------------------------------------
-window.addEventListener('DOMContentLoaded', afficherBilanHydrique);
-
-
-//-----------------------------------------
-// 🔵 CHANGEMENT TYPE DE TOITURE
-//-----------------------------------------
-document.getElementById('typeToiture').addEventListener('change', afficherBilanHydrique);
 </script>
+
+
 
 </body>
 </html>
-
-</html>
-
-
-
