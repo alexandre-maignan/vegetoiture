@@ -83,6 +83,27 @@
 
 
 
+@media (max-width: 600px) {
+    .mapbar {
+        flex-direction: column;
+        gap: 10px; /* espace plus petit */
+        top: 10px; /* un peu plus haut */
+    }
+
+    .mapbar button,
+    .search-bar {
+        width: 90vw;        /* presque toute la largeur */
+        justify-content: center; /* centrer le contenu */
+    }
+
+    .search-bar input {
+        width: 100%; /* pour que le texte ne déborde pas */
+    }
+}
+
+
+
+
     </style>
 </head>
 <body>
@@ -184,3 +205,4 @@ searchInput.addEventListener('keypress', function(e) {
 
 </body>
 </html>
+
