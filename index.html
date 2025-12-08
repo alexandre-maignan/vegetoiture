@@ -1,211 +1,126 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte avec barre de boutons</title>
+  <meta charset="utf-8" />
+  <title>Polygon Editing Intuitif</title>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <style>
-        /* Reset global */
-        * { margin:0; padding:0; box-sizing:border-box; font-family: 'Roboto', sans-serif; }
-        html, body { height:100%; width:100%; }
-        #map { height:100%; width:100%; position:relative; filter: contrast(0.8) saturate(0.8); /* contraste réduit et saturation diminuée */}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-        /* Barre de boutons centrée en haut */
-        .mapbar {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            z-index: 1000;
-        }
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
 
-        .mapbar button {
-            padding: 10px 14px;
-            font-size: 16px;
-            cursor: pointer;
-            color: white;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* ombre légère */ 
-            border-radius: 50px; /* arrondi complet */
-            background-color: #3399FF;
-            display: flex;
-            align-items: center;
-            white-space: nowrap;
-            transition: background-color 0.3s ease;
-        }
+    .leaflet-control-custom {
+      background: #1976d2;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: sans-serif;
+      font-size: 14px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      user-select: none;
+    }
+    .leaflet-control-custom:hover { background: #125a9c; }
 
-        .mapbar button i {
-            margin-right: 8px;
-            font-size: 1em;       /* même taille que le texte */
-            display: inline-flex;
-            align-items: center;  /* alignement vertical */
-        }
+    .leaflet-interactive { stroke: #1976d2 !important; stroke-width: 3px; stroke-dasharray: 0 !important; }
 
-        .mapbar button:hover {
-          background-color: #2A82E6; /* couleur légèrement plus foncée au survol */
-        }
-
-
-.search-bar {
-            display: flex;
-            align-items: center;
-            padding: 10px 14px;
-            font-size: 16px;
-            border-radius: 50px;
-            border: none;
-            background-color: #fff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-
-        .search-bar i {
-            margin-right: 8px;
-            color: #555;
-        }
-
-        .search-bar input {
-            border: none;
-            outline: none;
-            font-size: 14px;
-            width: auto; 
-        }
-
-
-#searchBtn {
-    cursor: pointer;
-}
-
-
-
-@media (max-width: 750px) {
-    .mapbar {
-        flex-direction: column;
-        gap: 10px; /* espace plus petit */
-        top: 10px; /* un peu plus haut */
+    .leaflet-editing-icon, .leaflet-edit-move {
+      background: #fff !important;
+      border: 2px solid #1976d2 !important;
+      border-radius: 50% !important;
+      width: 12px !important;
+      height: 12px !important;
+      margin-left: -6px !important;
+      margin-top: -6px !important;
     }
 
-    .mapbar button,
-    .search-bar {
-        width: 80vw;        /* presque toute la largeur */
-        justify-content: center; /* centrer le contenu */
+    .leaflet-editing-midpoint {
+      background: #1976d2 !important;
+      border-radius: 50% !important;
+      width: 10px !important;
+      height: 10px !important;
+      margin-left: -5px !important;
+      margin-top: -5px !important;
     }
 
-    .search-bar input {
-        width: 100%; /* pour que le texte ne déborde pas */
+    .leaflet-draw-guide-line,
+    .leaflet-draw-guide-dash,
+    path.leaflet-draw-preview {
+      stroke-dasharray: 0 !important;
+      stroke: #1976d2 !important;
+      stroke-width: 2px !important;
     }
-}
-
-
-
-
-    </style>
+  </style>
 </head>
 <body>
 
-    <div id="map"></div>
-
-    <!-- Barre de boutons -->
-    <div class="mapbar">
-        <button id="btn1"><i class="fa-solid fa-pen"></i> Tracer la toiture</button>
-<div class="search-bar">
-    <i id="searchBtn" class="fa-solid fa-magnifying-glass"></i>
-    <input type="text" placeholder="Rechercher une adresse" id="searchInput">
-</div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
-
-    <script>
-        // Initialisation de la carte (centrée sur Paris)
-        var map = L.map('map').setView([48.8566, 2.3522], 19);
-
-        // Fond OpenStreetMap
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    maxZoom: 19
-}).addTo(map);
-
-
-
-        // Déplacer les boutons de zoom en bas à droite
-        map.zoomControl.remove();
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        // Bouton de géolocalisation
-        L.control.locate({
-            position: 'bottomright',
-            strings: { title: "Afficher ma position" },
-            flyTo: true,
-            showPopup: false,
-            drawCircle: false
-        }).addTo(map);
-
-        // Événements pour les boutons
-        document.getElementById('btn1').addEventListener('click', () => alert("Bouton 1 cliqué !"));
-    </script>
-
-
-
-
+<div id="map"></div>
 
 <script>
-const searchInput = document.getElementById('searchInput');
-const searchBtn = document.getElementById('searchBtn');
+const map = L.map("map").setView([48.8566, 2.3522], 13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-function geocodeAndMoveMap(query) {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+const drawnItems = new L.FeatureGroup().addTo(map);
 
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.length > 0) {
-                const lat = parseFloat(data[0].lat);
-                const lon = parseFloat(data[0].lon);
+/* BOUTON DESSINER */
+const DrawButton = L.Control.extend({
+  onAdd: function() {
+    const btn = L.DomUtil.create("div", "leaflet-control-custom");
+    btn.innerHTML = "✏️ Dessiner";
+    btn.onclick = () => polygonDrawer.enable();
+    return btn;
+  }
+});
+map.addControl(new DrawButton({ position: "topleft" }));
 
-                // Déplacer la carte
-                map.setView([lat, lon], 16); // zoom à 16 pour la localisation précise
-
-                // Ajouter un marqueur à l'adresse
-                L.marker([lat, lon]).addTo(map)
-                    .bindPopup(query)
-                    .openPopup();
-            } else {
-                alert("Adresse introuvable");
-            }
-        })
-        .catch(error => {
-            console.error("Erreur de géocodage :", error);
-            alert("Erreur lors de la recherche");
-        });
-}
-
-// Recherche sur clic
-searchBtn.addEventListener('click', () => {
-    const query = searchInput.value.trim();
-    if (query) {
-        geocodeAndMoveMap(query);
-    }
+/* OUTIL POLYGONE */
+let polygonDrawer = new L.Draw.Polygon(map, {
+  allowIntersection: false,
+  showArea: false,
+  shapeOptions: { color: "#1976d2", weight: 3 },
 });
 
-// Recherche sur Enter
-searchInput.addEventListener('keypress', function(e) {
-    if(e.key === 'Enter') searchBtn.click();
+/* POLYGONE ACTIF */
+let activePolygon = null;
+
+map.on(L.Draw.Event.CREATED, function (e) {
+  const layer = e.layer;
+  drawnItems.addLayer(layer);
+
+  // Désactiver l'ancien si existait
+  if(activePolygon && activePolygon.editing.enabled()){
+    activePolygon.editing.disable();
+  }
+
+  activePolygon = layer;
+  layer.editing.enable();
 });
 
+/* CLIQUE SUR LA CARTE */
+map.on("click", function(e){
+  if(!activePolygon) return;
+
+  // Si le clic est en dehors du polygone
+  if(!activePolygon.getBounds().contains(e.latlng)){
+    activePolygon.editing.disable();
+    activePolygon = null;
+  }
+});
+
+/* CLIQUE SUR POLYGONE → réactiver édition */
+drawnItems.on('click', function(e){
+  if(activePolygon && activePolygon.editing.enabled()) return; // déjà actif
+
+  if(activePolygon && activePolygon.editing.enabled()) activePolygon.editing.disable();
+  
+  activePolygon = e.layer || e.target;
+  activePolygon.editing.enable();
+});
 </script>
-
-
 
 </body>
 </html>
-
-
-
