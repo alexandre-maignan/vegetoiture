@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Polygon Editing Intuitif</title>
+  <title>Polygon Editing Mobile</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -12,42 +12,54 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <style>
-    html, body, #map { height: 100%; margin: 0; }
+    html, body, #map { height: 100%; margin: 0; touch-action: none; }
 
+    /* BOUTON DESSINER TACTILE */
     .leaflet-control-custom {
       background: #1976d2;
       color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 12px 18px;  /* plus grand pour le doigt */
+      border-radius: 6px;
       cursor: pointer;
       font-family: sans-serif;
-      font-size: 14px;
+      font-size: 16px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
       user-select: none;
+      touch-action: manipulation;
     }
     .leaflet-control-custom:hover { background: #125a9c; }
 
-    .leaflet-interactive { stroke: #1976d2 !important; stroke-width: 3px; stroke-dasharray: 0 !important; }
-
-    .leaflet-editing-icon, .leaflet-edit-move {
-      background: #fff !important;
-      border: 2px solid #1976d2 !important;
-      border-radius: 50% !important;
-      width: 12px !important;
-      height: 12px !important;
-      margin-left: -6px !important;
-      margin-top: -6px !important;
+    /* POLYGONES */
+    .leaflet-interactive {
+      stroke: #1976d2 !important;
+      stroke-width: 3px;
+      stroke-dasharray: 0 !important;
     }
 
+    /* VERTICES */
+    .leaflet-editing-icon, .leaflet-edit-move {
+      background: #fff !important;
+      border: 3px solid #1976d2 !important; /* plus gros pour mobile */
+      border-radius: 50% !important;
+      width: 18px !important;
+      height: 18px !important;
+      margin-left: -9px !important;
+      margin-top: -9px !important;
+      touch-action: none;
+    }
+
+    /* MIDPOINTS */
     .leaflet-editing-midpoint {
       background: #1976d2 !important;
       border-radius: 50% !important;
-      width: 10px !important;
-      height: 10px !important;
-      margin-left: -5px !important;
-      margin-top: -5px !important;
+      width: 14px !important;
+      height: 14px !important;
+      margin-left: -7px !important;
+      margin-top: -7px !important;
+      touch-action: none;
     }
 
+    /* Lignes guides */
     .leaflet-draw-guide-line,
     .leaflet-draw-guide-dash,
     path.leaflet-draw-preview {
@@ -62,7 +74,7 @@
 <div id="map"></div>
 
 <script>
-const map = L.map("map").setView([48.8566, 2.3522], 13);
+const map = L.map("map", {tap:true, zoomControl:true}).setView([48.8566, 2.3522], 13);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 const drawnItems = new L.FeatureGroup().addTo(map);
@@ -85,14 +97,12 @@ let polygonDrawer = new L.Draw.Polygon(map, {
   shapeOptions: { color: "#1976d2", weight: 3 },
 });
 
-/* POLYGONE ACTIF */
 let activePolygon = null;
 
 map.on(L.Draw.Event.CREATED, function (e) {
   const layer = e.layer;
   drawnItems.addLayer(layer);
 
-  // Désactiver l'ancien si existait
   if(activePolygon && activePolygon.editing.enabled()){
     activePolygon.editing.disable();
   }
@@ -101,23 +111,17 @@ map.on(L.Draw.Event.CREATED, function (e) {
   layer.editing.enable();
 });
 
-/* CLIQUE SUR LA CARTE */
 map.on("click", function(e){
   if(!activePolygon) return;
-
-  // Si le clic est en dehors du polygone
   if(!activePolygon.getBounds().contains(e.latlng)){
     activePolygon.editing.disable();
     activePolygon = null;
   }
 });
 
-/* CLIQUE SUR POLYGONE → réactiver édition */
 drawnItems.on('click', function(e){
-  if(activePolygon && activePolygon.editing.enabled()) return; // déjà actif
-
+  if(activePolygon && activePolygon.editing.enabled()) return;
   if(activePolygon && activePolygon.editing.enabled()) activePolygon.editing.disable();
-  
   activePolygon = e.layer || e.target;
   activePolygon.editing.enable();
 });
@@ -125,4 +129,3 @@ drawnItems.on('click', function(e){
 
 </body>
 </html>
-
