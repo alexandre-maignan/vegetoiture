@@ -36,8 +36,23 @@ html, body { height:100%; width:100%; }
     display: flex;
     z-index: 1000;
 }
-.mapbar button, .footbar button {
+.mapbar button {
     padding: 12px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    color: white;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    border-radius: 50px;
+    background-color: #3399FF; /* bleu par défaut */
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    transition: background-color 0.3s ease;
+}
+
+    .footbar button {
+    padding: 15px 18px;
     font-size: 16px;
     cursor: pointer;
     color: white;
@@ -121,27 +136,30 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.control.locate({ position: 'bottomright', flyTo: true, drawCircle: false }).addTo(map);
 
 const drawnItems = new L.FeatureGroup().addTo(map);
+let activePolygon = null;
 const startBtn = document.getElementById("startAnalysisBtn");
+let tempLayer = null;
+
 const drawBtn = document.getElementById("btn1");
 let isDrawing = false;
 
+// Initialisation du polygonDrawer
 let polygonDrawer = new L.Draw.Polygon(map, {
     allowIntersection: false,
     shapeOptions: { color: "#FFD700", weight: 4, opacity: 1, fillOpacity: 0.2 }
 });
 
-// Cliquer sur le bouton
+// Click sur le bouton
 drawBtn.addEventListener("click", () => {
     if (!isDrawing) {
-        // Commencer un nouveau tracé
         polygonDrawer.enable();
     } else {
-        // Supprimer tous les polygones et réinitialiser le bouton
-        drawnItems.clearLayers();
+        // Annuler le tracé en cours
+        if (tempLayer) map.removeLayer(tempLayer);
+        polygonDrawer.disable();
         drawBtn.innerHTML = '<i class="fa-solid fa-pen"></i> Tracer la toiture';
         drawBtn.classList.remove('cancel');
         isDrawing = false;
-        startBtn.classList.remove("show");
     }
 });
 
@@ -152,20 +170,29 @@ map.on(L.Draw.Event.DRAWSTART, function () {
     drawBtn.classList.add('cancel');
 });
 
+// Pendant le dessin, récupérer le layer temporaire
+map.on(L.Draw.Event.DRAWVERTEX, function (e) {
+    tempLayer = e.layers ? e.layers.getLayers()[0] : e.layer;
+});
+
 // Quand le polygone est créé
 map.on(L.Draw.Event.CREATED, function (e) {
     const layer = e.layer;
     drawnItems.addLayer(layer);
+    activePolygon = layer;
     layer.editing.enable();
     startBtn.classList.add("show");
 
-    // Le bouton reste rouge pour supprimer les polygones si on clique dessus
-    isDrawing = true;
+    drawBtn.innerHTML = '<i class="fa-solid fa-pen"></i> Tracer la toiture';
+    drawBtn.classList.remove('cancel');
+    isDrawing = false;
+    tempLayer = null;
 });
 
-// Cliquer un polygone pour éditer
+// Cliquer un polygone pour réactiver l'édition
 drawnItems.on('click', function(e){
-    e.layer.editing.enable();
+    activePolygon = e.layer;
+    activePolygon.editing.enable();
     startBtn.classList.add("show");
 });
 
@@ -194,4 +221,3 @@ searchInput.addEventListener('keypress', e => { if(e.key === 'Enter') searchBtn.
 </script>
 </body>
 </html>
-
